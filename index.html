@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyBridge — WAEC & NECO Study Planner</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 8px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 40px; }
+    .header { background: var(--primary); color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .nav-tabs { display: flex; gap: 8px; }
+    .nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 7px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .nav-btn.active, .nav-btn:hover { background: white; color: var(--primary); }
+    .container { max-width: 950px; margin: 20px auto; padding: 0 15px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px; text-align: center; }
+    .stat-card .val { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+    .stat-card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+    .card { background: var(--card); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); margin-bottom: 20px; }
+    h2 { font-size: 1.2rem; color: var(--primary); margin-bottom: 4px; }
+    .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 15px; }
+    .form-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .form-group { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 0.8rem; font-weight: 600; }
+    input, select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+    .btn { padding: 8px 14px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: white; background: var(--primary); }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-success { background: #10b981; }
+    .btn-danger { background: #ef4444; }
+    .btn-sm { padding: 4px 8px; font-size: 0.78rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 10px; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { background: #f8fafc; color: var(--muted); font-weight: 600; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-info { background: #e0f2fe; color: #075985; }
+    .badge-success { background: #dcfce7; color: #166534; }
+    .task-done { text-decoration: line-through; color: var(--muted); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <h2>📘 StudyBridge</h2>
+    <div class="nav-tabs">
+      <button class="nav-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+      <button class="nav-btn" onclick="switchTab('scores')">Scores</button>
+      <button class="nav-btn" onclick="switchTab('timetable')">Timetable</button>
+      <button class="nav-btn" onclick="switchTab('subjects')">Subjects</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Top Statistics Overview -->
+    <div class="grid-4">
+      <div class="stat-card"><div class="val" id="statSubjects">0</div><div class="label">Subjects</div></div>
+      <div class="stat-card"><div class="val" id="statTopics">0</div><div class="label">Topics</div></div>
+      <div class="stat-card"><div class="val" id="statCompleted">0 / 0</div><div class="label">Completed Tasks</div></div>
+      <div class="stat-card"><div class="val" id="statHours">0.0h</div><div class="label">Time Studied</div></div>
+    </div>
+
+    <!-- 1. DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content active">
+      <div class="card">
+        <h2>🎯 Revision Recommendations (Rules Engine)</h2>
+        <p class="subtitle">Computed in Python: &lt;60% Immediate Revision, 60–79% Targeted Practice, &ge;80% Maintenance.</p>
+        <table>
+          <thead>
+            <tr><th>Subject</th><th>Topic</th><th>Score</th><th>Status</th><th>Engine Rationale</th></tr>
+          </thead>
+          <tbody id="recTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. PRACTICE SCORES -->
+    <div id="tab-scores" class="tab-content">
+      <div class="card">
+        <h2>Record Practice Test Score</h2>
+        <p class="subtitle">Validates between 0 and 100 on both browser and backend.</p>
+        <form id="scoreForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Topic</label>
+              <select id="scoreTopic" required></select>
+            </div>
+            <div class="form-group">
+              <label>Score (0 - 100)</label>
+              <input type="number" id="scoreVal" step="0.5" min="0" max="100" required placeholder="e.g. 42 or 88">
+            </div>
+          </div>
+          <button type="submit" class="btn">Save Score to SQLite</button>
+        </form>
+
+        <h3 style="margin-top:20px;">Score History</h3>
+        <table>
+          <thead><tr><th>Date</th><th>Subject</th><th>Topic</th><th>Score</th></tr></thead>
+          <tbody id="scoreTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 3. TIMETABLE PLANNER -->
+    <div id="tab-timetable" class="tab-content">
+      <div class="card">
+        <h2>Weekly Study Timetable Generator</h2>
+        <p class="subtitle">Allocates available hours proportionally, giving weaker topics priority focus blocks.</p>
+        <button class="btn btn-success" onclick="generateTimetable()">⚡ Generate Timetable</button>
+        
+        <table style="margin-top:15px;">
+          <thead><tr><th>Day</th><th>Subject</th><th>Topic</th><th>Duration</th><th>Action</th></tr></thead>
+          <tbody id="timetableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 4. SUBJECTS & TOPICS -->
+    <div id="tab-subjects" class="tab-content">
+      <div class="card">
+        <h2>Registered Exam Subjects</h2>
+        <p class="subtitle">Loaded from the SQLite database (`studybridge.db`).</p>
+        <table>
+          <thead><tr><th>Subject Name</th><th>Exam Date</th><th>Topics</th></tr></thead>
+          <tbody id="subjectsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + tabId).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    async function loadData() {
+      const res = await fetch('/api/data');
+      const data = await res.json();
+
+      // Metrics
+      document.getElementById('statSubjects').textContent = data.metrics.total_subjects;
+      document.getElementById('statTopics').textContent = data.metrics.total_topics;
+      document.getElementById('statCompleted').textContent = `${data.metrics.completed_sessions} / ${data.metrics.total_sessions}`;
+      document.getElementById('statHours').textContent = `${data.metrics.completed_hours}h`;
+
+      // Recommendations
+      const rBody = document.getElementById('recTableBody');
+      rBody.innerHTML = '';
+      data.recommendations.forEach(r => {
+        rBody.innerHTML += `
+          <tr>
+            <td><strong>${r.subject_name}</strong></td>
+            <td>${r.topic_name}</td>
+            <td>${r.latest_score !== null ? r.latest_score + '%' : 'None'}</td>
+            <td><span class="badge ${r.badge}">${r.category}</span></td>
+            <td>${r.reason}</td>
+          </tr>
+        `;
+      });
+
+      // Scores
+      const sBody = document.getElementById('scoreTableBody');
+      sBody.innerHTML = '';
+      data.scores.forEach(s => {
+        const badge = s.score < 60 ? 'badge-danger' : (s.score < 80 ? 'badge-info' : 'badge-success');
+        sBody.innerHTML += `
+          <tr>
+            <td>${s.test_date}</td>
+            <td>${s.subject_name}</td>
+            <td><strong>${s.topic_name}</strong></td>
+            <td><span class="badge ${badge}">${s.score}%</span></td>
+          </tr>
+        `;
+      });
+
+      // Topic Dropdown
+      const select = document.getElementById('scoreTopic');
+      select.innerHTML = '<option value="">-- Choose Topic --</option>';
+      data.subjects.forEach(sub => {
+        sub.topics.forEach(top => {
+          select.innerHTML += `<option value="${top.id}">${sub.name} &rarr; ${top.name}</option>`;
+        });
+      });
+
+      // Subjects List
+      const subBody = document.getElementById('subjectsTableBody');
+      subBody.innerHTML = '';
+      data.subjects.forEach(sub => {
+        subBody.innerHTML += `
+          <tr>
+            <td><strong>${sub.name}</strong></td>
+            <td>${sub.exam_date || 'Not set'}</td>
+            <td>${sub.topics.map(t => t.name).join(', ')}</td>
+          </tr>
+        `;
+      });
+
+      // Timetable
+      const tBody = document.getElementById('timetableBody');
+      tBody.innerHTML = '';
+      if (data.sessions.length === 0) {
+        tBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--muted);">Click 'Generate Timetable' above.</td></tr>`;
+      } else {
+        data.sessions.forEach(ses => {
+          tBody.innerHTML += `
+            <tr class="${ses.completed ? 'task-done' : ''}">
+              <td><strong>${ses.day_name}</strong></td>
+              <td>${ses.subject_name}</td>
+              <td>${ses.topic_name}</td>
+              <td>${ses.allocated_minutes} mins</td>
+              <td>
+                <button class="btn btn-sm ${ses.completed ? 'btn-danger' : 'btn-success'}" onclick="toggleSession(${ses.id})">
+                  ${ses.completed ? 'Mark Incomplete' : 'Mark Complete ✓'}
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+      }
+    }
+
+    document.getElementById('scoreForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const topic_id = document.getElementById('scoreTopic').value;
+      const score = parseFloat(document.getElementById('scoreVal').value);
+
+      if (isNaN(score) || score < 0 || score > 100) return alert("Score must be between 0 and 100.");
+
+      await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic_id, score })
+      });
+      document.getElementById('scoreVal').value = '';
+      loadData();
+      alert("Score saved to SQLite!");
+    });
+
+    async function generateTimetable() {
+      await fetch('/api/timetable/generate', { method: 'POST' });
+      loadData();
+      alert("Timetable generated! Weak topics (e.g. Mathematics) received priority focus blocks.");
+    }
+
+    async function toggleSession(id) {
+      await fetch('/api/timetable/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: id })
+      });
+      loadData();
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
